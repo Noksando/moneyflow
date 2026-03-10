@@ -1,21 +1,19 @@
 require("dotenv").config();
 
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
-const { Pool } = require("pg");
 
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET || "development-secret";
 const APP_PASSWORD = process.env.APP_PASSWORD || "change-me";
 const COOKIE_NAME = "moneyflow_session";
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data", "moneyflow.json");
 
 const app = express();
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: shouldUseSsl(process.env.DATABASE_URL) ? { rejectUnauthorized: false } : false,
-});
+let state = readState();
 
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
@@ -60,11 +58,10 @@ app.post("/api/auth/logout", (_request, response) => {
 
 app.get("/api/state", requireAuth, async (_request, response, next) => {
   try {
-    const result = await pool.query("SELECT state, updated_at FROM app_state WHERE id = 1");
-    const row = result.rows[0];
+    state = readState();
     response.json({
-      state: row ? row.state : {},
-      updatedAt: row ? row.updated_at : null,
+      state: state.data,
+      updatedAt: state.updatedAt,
     });
   } catch (error) {
     next(error);
@@ -79,18 +76,13 @@ app.put("/api/state", requireAuth, async (request, response, next) => {
       return;
     }
 
-    const result = await pool.query(
-      `
-        INSERT INTO app_state (id, state, updated_at)
-        VALUES (1, $1::jsonb, NOW())
-        ON CONFLICT (id)
-        DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()
-        RETURNING updated_at
-      `,
-      [JSON.stringify(nextState)],
-    );
+    state = {
+      data: normalizeState(nextState),
+      updatedAt: new Date().toISOString(),
+    };
+    writeState(state);
 
-    response.json({ ok: true, updatedAt: result.rows[0].updated_at });
+    response.json({ ok: true, updatedAt: state.updatedAt });
   } catch (error) {
     next(error);
   }
@@ -110,39 +102,79 @@ app.use((error, _request, response, _next) => {
   response.status(500).json({ error: "서버에서 문제가 발생했다." });
 });
 
-initialize()
-  .then(() => {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Moneyflow server listening on ${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error("Failed to initialize server", error);
-    process.exit(1);
-  });
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Moneyflow server listening on ${PORT}`);
+});
 
-async function initialize() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS app_state (
-      id SMALLINT PRIMARY KEY CHECK (id = 1),
-      state JSONB NOT NULL DEFAULT '{}'::jsonb,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-
-  await pool.query(`
-    INSERT INTO app_state (id, state)
-    VALUES (1, '{}'::jsonb)
-    ON CONFLICT (id) DO NOTHING
-  `);
+function readState() {
+  ensureDataFile();
+  try {
+    const raw = fs.readFileSync(DATA_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    return {
+      data: normalizeState(parsed.data),
+      updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : null,
+    };
+  } catch (error) {
+    console.error("Failed to read data file:", error);
+    return createEmptyState();
+  }
 }
 
-function shouldUseSsl(connectionString) {
-  if (!connectionString) {
-    return false;
+function writeState(nextState) {
+  ensureDataFile();
+  fs.writeFileSync(DATA_FILE, JSON.stringify(nextState, null, 2), "utf8");
+}
+
+function ensureDataFile() {
+  const dir = path.dirname(DATA_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 
-  return !connectionString.includes("localhost") && !connectionString.includes("127.0.0.1");
+  if (!fs.existsSync(DATA_FILE)) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(createEmptyState(), null, 2), "utf8");
+  }
+}
+
+function createEmptyState() {
+  return {
+    data: {
+      viewYear: new Date().getFullYear(),
+      viewMonth: new Date().getMonth(),
+      selectedDate: formatDateKey(new Date()),
+      entries: [],
+      fixedItems: [],
+    },
+    updatedAt: null,
+  };
+}
+
+function normalizeState(candidate) {
+  const baseState = createEmptyState().data;
+  const parsed = candidate && typeof candidate === "object" ? candidate : {};
+  const fallbackMonthKey = `${baseState.viewYear}-${String(baseState.viewMonth + 1).padStart(2, "0")}`;
+
+  return {
+    ...baseState,
+    ...parsed,
+    entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+    fixedItems: Array.isArray(parsed.fixedItems)
+      ? parsed.fixedItems.map((item) => ({
+          ...item,
+          monthKey: item.monthKey || fallbackMonthKey,
+          status: item.status === "closed" ? "closed" : "open",
+        }))
+      : [],
+  };
+}
+
+function formatDateKey(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function requireAuth(request, response, next) {

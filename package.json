@@ -2,7 +2,7 @@
   "name": "moneyflow",
   "version": "1.0.0",
   "private": true,
-  "description": "Personal finance calendar with a Node backend and Postgres sync.",
+  "description": "Personal finance calendar with a Node backend and file-based sync.",
   "scripts": {
     "start": "node server.js"
   },
@@ -13,7 +13,6 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.3"
+    "jsonwebtoken": "^9.0.2"
   }
 }
