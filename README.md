@@ -19,7 +19,7 @@
 2. `Authentication > Providers > Email`이 켜져 있는지 확인한다.
 3. `SQL Editor`에서 [supabase-schema.sql](/Users/baek/Documents/personal_finance/supabase-schema.sql) 내용을 실행한다.
 4. `Project Settings > API`에서 `Project URL`과 `anon public key`를 복사한다.
-5. 루트의 [config.js](/Users/baek/Documents/personal_finance/config.js)에 Supabase 값이 들어간다. 필요하면 [config.example.js](/Users/baek/Documents/personal_finance/config.example.js)를 참고해서 교체하면 된다.
+5. 루트에 `config.js`를 만들고 [config.example.js](/Users/baek/Documents/personal_finance/config.example.js)를 복사한 뒤 값만 채운다.
 
 예시:
 
@@ -57,8 +57,10 @@ python3 -m http.server 4173 -d dist
 2. `New > Blueprint` 또는 `New > Static Site`를 선택한다.
 3. Build Command는 `npm install && npm run build`
 4. Publish Directory는 `dist`
-5. 기본값으로는 저장소의 [config.js](/Users/baek/Documents/personal_finance/config.js)를 사용한다.
-6. 필요하면 Build 환경변수 `SUPABASE_URL`, `SUPABASE_ANON_KEY`로 빌드 시 덮어쓸 수 있다.
+5. Build 환경변수에 아래 둘 중 하나를 넣는다.
+
+- 방법 A: `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+- 방법 B: `config.js`를 저장소에 커밋
 
 정적 사이트는 별도 DB 비용이 없고, 데이터 저장은 Supabase Free로 간다.
 
