@@ -1,4 +1,5 @@
-const STORAGE_KEY = "personal-finance-calendar-v1";
+const LEGACY_STORAGE_KEY = "personal-finance-calendar-v1";
+const CACHE_STORAGE_KEY = "moneyflow-cache-v2";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const elements = {
@@ -20,51 +21,58 @@ const elements = {
   fixedItemTemplate: document.querySelector("#fixed-item-template"),
   prevMonth: document.querySelector("#prev-month"),
   nextMonth: document.querySelector("#next-month"),
+  syncStatus: document.querySelector("#sync-status"),
+  loginOverlay: document.querySelector("#login-overlay"),
+  loginForm: document.querySelector("#login-form"),
+  loginPassword: document.querySelector("#login-password"),
+  loginError: document.querySelector("#login-error"),
+  logoutButton: document.querySelector("#logout-button"),
 };
 
 const today = new Date();
-let state = loadState();
+let state = createDefaultState();
+let auth = {
+  authenticated: false,
+  loading: true,
+};
 
-renderWeekdays();
-renderApp();
-bindEvents();
-registerServiceWorker();
+initialize();
 
-function loadState() {
-  const baseState = {
+async function initialize() {
+  renderWeekdays();
+  bindEvents();
+  renderApp();
+  registerServiceWorker();
+  await bootstrapSession();
+}
+
+function createDefaultState() {
+  return {
     viewYear: today.getFullYear(),
     viewMonth: today.getMonth(),
     selectedDate: formatDateKey(today),
     entries: [],
     fixedItems: [],
   };
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return baseState;
-    }
-
-    const parsed = JSON.parse(raw);
-    const fallbackMonthKey = `${baseState.viewYear}-${String(baseState.viewMonth + 1).padStart(2, "0")}`;
-    return {
-      ...baseState,
-      ...parsed,
-      entries: Array.isArray(parsed.entries) ? parsed.entries : [],
-      fixedItems: Array.isArray(parsed.fixedItems)
-        ? parsed.fixedItems.map((item) => ({
-            ...item,
-            monthKey: item.monthKey || fallbackMonthKey,
-          }))
-        : [],
-    };
-  } catch {
-    return baseState;
-  }
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function normalizeState(candidate) {
+  const baseState = createDefaultState();
+  const parsed = candidate && typeof candidate === "object" ? candidate : {};
+  const fallbackMonthKey = `${baseState.viewYear}-${String(baseState.viewMonth + 1).padStart(2, "0")}`;
+
+  return {
+    ...baseState,
+    ...parsed,
+    entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+    fixedItems: Array.isArray(parsed.fixedItems)
+      ? parsed.fixedItems.map((item) => ({
+          ...item,
+          monthKey: item.monthKey || fallbackMonthKey,
+          status: item.status === "closed" ? "closed" : "open",
+        }))
+      : [],
+  };
 }
 
 function bindEvents() {
@@ -76,8 +84,12 @@ function bindEvents() {
     moveMonth(1);
   });
 
-  elements.entryForm.addEventListener("submit", (event) => {
+  elements.entryForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!auth.authenticated) {
+      openLoginOverlay("먼저 비밀번호를 입력해줘.");
+      return;
+    }
 
     state.entries.push({
       id: crypto.randomUUID(),
@@ -90,15 +102,20 @@ function bindEvents() {
 
     state.selectedDate = elements.entryDate.value;
     syncViewToSelectedDate();
-    saveState();
+    cacheState(state);
     elements.entryForm.reset();
     elements.entryDate.value = state.selectedDate;
     elements.entryKind.value = "income";
     renderApp();
+    await persistState();
   });
 
-  elements.fixedForm.addEventListener("submit", (event) => {
+  elements.fixedForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!auth.authenticated) {
+      openLoginOverlay("먼저 비밀번호를 입력해줘.");
+      return;
+    }
 
     state.fixedItems.push({
       id: crypto.randomUUID(),
@@ -111,10 +128,152 @@ function bindEvents() {
       realizedDate: null,
     });
 
-    saveState();
+    cacheState(state);
     elements.fixedForm.reset();
     renderApp();
+    await persistState();
   });
+
+  elements.loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const password = elements.loginPassword.value;
+    await login(password);
+  });
+
+  elements.logoutButton.addEventListener("click", async () => {
+    await api("/api/auth/logout", { method: "POST" });
+    auth.authenticated = false;
+    elements.loginPassword.value = "";
+    elements.loginError.textContent = "";
+    setSyncStatus("로그인 필요");
+    renderApp();
+    openLoginOverlay("");
+  });
+}
+
+async function bootstrapSession() {
+  const cachedState = loadCachedState();
+  if (cachedState) {
+    state = cachedState;
+  }
+
+  setSyncStatus("세션 확인 중");
+  renderApp();
+
+  try {
+    const session = await api("/api/auth/session");
+    auth.authenticated = Boolean(session.authenticated);
+    auth.loading = false;
+
+    if (auth.authenticated) {
+      await loadRemoteState();
+      closeLoginOverlay();
+    } else {
+      setSyncStatus("로그인 필요");
+      openLoginOverlay("");
+    }
+  } catch {
+    auth.loading = false;
+    setSyncStatus("서버 연결 안 됨");
+    openLoginOverlay("서버에 연결할 수 없다.");
+  }
+
+  renderApp();
+}
+
+async function login(password) {
+  if (!password) {
+    elements.loginError.textContent = "비밀번호를 입력해줘.";
+    return;
+  }
+
+  elements.loginError.textContent = "";
+  setSyncStatus("로그인 중");
+
+  try {
+    await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+
+    auth.authenticated = true;
+    elements.loginPassword.value = "";
+    await loadRemoteState();
+    closeLoginOverlay();
+    renderApp();
+  } catch (error) {
+    auth.authenticated = false;
+    setSyncStatus("로그인 실패");
+    elements.loginError.textContent = error.message || "로그인에 실패했다.";
+    openLoginOverlay("");
+  }
+}
+
+async function loadRemoteState() {
+  setSyncStatus("서버에서 불러오는 중");
+  const response = await api("/api/state");
+  const remoteState = normalizeState(response.state);
+  const legacyState = loadLegacyState();
+
+  if (isStateEmpty(remoteState) && legacyState && !isStateEmpty(legacyState)) {
+    state = legacyState;
+    cacheState(state);
+    await persistState("기존 로컬 데이터를 가져오는 중");
+    return;
+  }
+
+  state = remoteState;
+  cacheState(state);
+  setSyncStatus("동기화됨");
+}
+
+async function persistState(statusText = "저장 중") {
+  cacheState(state);
+  setSyncStatus(statusText);
+
+  try {
+    await api("/api/state", {
+      method: "PUT",
+      body: JSON.stringify({ state }),
+    });
+    setSyncStatus("저장됨");
+  } catch {
+    setSyncStatus("저장 실패");
+  }
+}
+
+function loadLegacyState() {
+  try {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    return normalizeState(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function loadCachedState() {
+  try {
+    const raw = localStorage.getItem(CACHE_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    return normalizeState(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function cacheState(nextState) {
+  localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(nextState));
+}
+
+function isStateEmpty(candidate) {
+  return candidate.entries.length === 0 && candidate.fixedItems.length === 0;
 }
 
 function renderApp() {
@@ -123,6 +282,14 @@ function renderApp() {
   renderSummary();
   renderFixedLists();
   hydrateSelection();
+  renderAuthState();
+}
+
+function renderAuthState() {
+  elements.logoutButton.hidden = !auth.authenticated;
+  if (auth.loading) {
+    setSyncStatus("세션 확인 중");
+  }
 }
 
 function renderWeekdays() {
@@ -173,7 +340,7 @@ function renderCalendar() {
       state.selectedDate = dateKey;
       state.viewYear = date.getFullYear();
       state.viewMonth = date.getMonth();
-      saveState();
+      cacheState(state);
       renderApp();
     });
 
@@ -282,15 +449,20 @@ function renderFixedList(container, kind) {
 
     const button = node.querySelector(".realize-button");
     button.disabled = !isOpen;
-    button.addEventListener("click", () => {
-      realizeFixedItem(item.id);
+    button.addEventListener("click", async () => {
+      await realizeFixedItem(item.id);
     });
 
     container.append(node);
   });
 }
 
-function realizeFixedItem(id) {
+async function realizeFixedItem(id) {
+  if (!auth.authenticated) {
+    openLoginOverlay("먼저 비밀번호를 입력해줘.");
+    return;
+  }
+
   const item = state.fixedItems.find((target) => target.id === id);
   if (!item || item.status === "closed") {
     return;
@@ -323,8 +495,9 @@ function realizeFixedItem(id) {
 
   state.selectedDate = input;
   syncViewToSelectedDate();
-  saveState();
+  cacheState(state);
   renderApp();
+  await persistState();
 }
 
 function hydrateSelection() {
@@ -374,7 +547,7 @@ function moveMonth(delta) {
   const next = new Date(state.viewYear, state.viewMonth + delta, 1);
   state.viewYear = next.getFullYear();
   state.viewMonth = next.getMonth();
-  saveState();
+  cacheState(state);
   renderApp();
 }
 
@@ -382,6 +555,46 @@ function syncViewToSelectedDate() {
   const selected = new Date(state.selectedDate);
   state.viewYear = selected.getFullYear();
   state.viewMonth = selected.getMonth();
+}
+
+function setSyncStatus(text) {
+  elements.syncStatus.textContent = text;
+}
+
+function openLoginOverlay(message) {
+  elements.loginOverlay.hidden = false;
+  elements.loginError.textContent = message;
+}
+
+function closeLoginOverlay() {
+  elements.loginOverlay.hidden = true;
+  elements.loginError.textContent = "";
+}
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    const error = new Error(payload.error || "요청에 실패했다.");
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload;
 }
 
 function formatMoney(value) {
