@@ -16,9 +16,9 @@
 <body>
   <div id="login-overlay" class="overlay" hidden>
     <section class="auth-card">
-      <p class="eyebrow">First Time Only</p>
+      <p class="eyebrow">Secure Access</p>
       <h2 id="auth-mode-label">로그인</h2>
-      <p class="auth-copy">처음 한 번만 계정을 만들면, 이후에는 같은 기기에서 거의 다시 로그인하지 않는다.</p>
+      <p class="auth-copy">Supabase에 로그인해서 네 달력 데이터를 기기 사이에 동기화한다.</p>
       <form id="auth-form" class="stack">
         <label>
           <span>이메일</span>
@@ -44,6 +44,7 @@
       </div>
       <div class="header-actions">
         <span id="sync-status" class="status-pill">세션 확인 중</span>
+        <button id="logout-button" class="ghost-button" type="button" hidden>로그아웃</button>
       </div>
       <div class="month-switcher">
         <button id="prev-month" type="button" aria-label="이전 달">←</button>
