@@ -37,7 +37,6 @@ const elements = {
   authModeLabel: document.querySelector("#auth-mode-label"),
   authSubmit: document.querySelector("#auth-submit"),
   authToggle: document.querySelector("#auth-toggle"),
-  logoutButton: document.querySelector("#logout-button"),
 };
 
 const today = new Date();
@@ -156,19 +155,6 @@ function bindEvents() {
     auth.mode = auth.mode === "login" ? "signup" : "login";
     elements.authError.textContent = "";
     renderAuthOverlay();
-  });
-
-  elements.logoutButton.addEventListener("click", async () => {
-    if (!supabase) {
-      return;
-    }
-
-    await supabase.auth.signOut();
-    auth.authenticated = false;
-    auth.user = null;
-    setSyncStatus("로그인 필요");
-    openAuthOverlay("");
-    renderApp();
   });
 
   if (supabase) {
@@ -385,7 +371,6 @@ function renderApp() {
 }
 
 function renderAuthState() {
-  elements.logoutButton.hidden = !auth.authenticated;
   renderAuthOverlay();
 }
 
