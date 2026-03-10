@@ -1,27 +1,14 @@
 services:
   - type: web
     name: moneyflow
-    runtime: node
-    region: frankfurt
-    plan: starter
-    buildCommand: npm install
-    startCommand: npm start
-    healthCheckPath: /api/health
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
     autoDeployTrigger: commit
-    envVars:
-      - key: NODE_VERSION
-        value: 22
-      - key: DATABASE_URL
-        fromDatabase:
-          name: moneyflow-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: APP_PASSWORD
-        sync: false
-
-databases:
-  - name: moneyflow-db
-    region: frankfurt
-    plan: basic-256mb
-    databaseName: moneyflow
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+      - path: /service-worker.js
+        name: Cache-Control
+        value: no-cache

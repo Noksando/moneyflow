@@ -17,16 +17,21 @@
   <div id="login-overlay" class="overlay" hidden>
     <section class="auth-card">
       <p class="eyebrow">Secure Access</p>
-      <h2>비밀번호로 들어가기</h2>
-      <p class="auth-copy">이 앱은 서버에 데이터를 저장하므로, 먼저 네 비밀번호로 세션을 연다.</p>
-      <form id="login-form" class="stack">
+      <h2 id="auth-mode-label">로그인</h2>
+      <p class="auth-copy">Supabase에 로그인해서 네 달력 데이터를 기기 사이에 동기화한다.</p>
+      <form id="auth-form" class="stack">
+        <label>
+          <span>이메일</span>
+          <input id="auth-email" type="email" autocomplete="email" required>
+        </label>
         <label>
           <span>비밀번호</span>
-          <input id="login-password" type="password" autocomplete="current-password" required>
+          <input id="auth-password" type="password" autocomplete="current-password" required>
         </label>
-        <button class="primary-button" type="submit">로그인</button>
+        <button id="auth-submit" class="primary-button" type="submit">로그인</button>
       </form>
-      <p id="login-error" class="auth-error"></p>
+      <button id="auth-toggle" class="text-button" type="button">처음이면 회원가입</button>
+      <p id="auth-error" class="auth-error"></p>
     </section>
   </div>
 
@@ -161,6 +166,7 @@
     </article>
   </template>
 
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
