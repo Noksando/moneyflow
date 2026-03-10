@@ -2,17 +2,18 @@
   "name": "moneyflow",
   "version": "1.0.0",
   "private": true,
-  "description": "Static personal finance calendar using Supabase for auth and sync.",
+  "description": "Personal finance calendar with a Node backend and Postgres sync.",
   "scripts": {
-    "build": "node scripts/build.mjs"
+    "start": "node server.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.1"
-  },
-  "devDependencies": {
-    "esbuild": "^0.25.1"
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.3"
   }
 }

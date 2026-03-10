@@ -369,8 +369,7 @@ select:focus {
 
 .primary-button,
 .secondary-button,
-.ghost-button,
-.text-button {
+.ghost-button {
   padding: 12px 14px;
 }
 
@@ -387,13 +386,6 @@ select:focus {
 .ghost-button {
   background: rgba(255, 255, 255, 0.8);
   color: var(--text);
-}
-
-.text-button {
-  padding: 0;
-  background: transparent;
-  color: var(--muted);
-  text-align: left;
 }
 
 .fixed-lists {

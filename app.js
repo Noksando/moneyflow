@@ -1,13 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
-
 const LEGACY_STORAGE_KEY = "personal-finance-calendar-v1";
-const CACHE_STORAGE_KEY = "moneyflow-cache-v3";
+const CACHE_STORAGE_KEY = "moneyflow-cache-v2";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-const config = window.MONEYFLOW_CONFIG || {};
-const supabase = config.supabaseUrl && config.supabaseAnonKey
-  ? createClient(config.supabaseUrl, config.supabaseAnonKey)
-  : null;
 
 const elements = {
   monthLabel: document.querySelector("#month-label"),
@@ -30,13 +23,9 @@ const elements = {
   nextMonth: document.querySelector("#next-month"),
   syncStatus: document.querySelector("#sync-status"),
   loginOverlay: document.querySelector("#login-overlay"),
-  authForm: document.querySelector("#auth-form"),
-  authEmail: document.querySelector("#auth-email"),
-  authPassword: document.querySelector("#auth-password"),
-  authError: document.querySelector("#auth-error"),
-  authModeLabel: document.querySelector("#auth-mode-label"),
-  authSubmit: document.querySelector("#auth-submit"),
-  authToggle: document.querySelector("#auth-toggle"),
+  loginForm: document.querySelector("#login-form"),
+  loginPassword: document.querySelector("#login-password"),
+  loginError: document.querySelector("#login-error"),
   logoutButton: document.querySelector("#logout-button"),
 };
 
@@ -45,8 +34,6 @@ let state = createDefaultState();
 let auth = {
   authenticated: false,
   loading: true,
-  mode: "login",
-  user: null,
 };
 
 initialize();
@@ -100,7 +87,7 @@ function bindEvents() {
   elements.entryForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!auth.authenticated) {
-      openAuthOverlay("먼저 로그인해줘.");
+      openLoginOverlay("먼저 비밀번호를 입력해줘.");
       return;
     }
 
@@ -126,7 +113,7 @@ function bindEvents() {
   elements.fixedForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!auth.authenticated) {
-      openAuthOverlay("먼저 로그인해줘.");
+      openLoginOverlay("먼저 비밀번호를 입력해줘.");
       return;
     }
 
@@ -147,46 +134,21 @@ function bindEvents() {
     await persistState();
   });
 
-  elements.authForm.addEventListener("submit", async (event) => {
+  elements.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await authenticate();
-  });
-
-  elements.authToggle.addEventListener("click", () => {
-    auth.mode = auth.mode === "login" ? "signup" : "login";
-    elements.authError.textContent = "";
-    renderAuthOverlay();
+    const password = elements.loginPassword.value;
+    await login(password);
   });
 
   elements.logoutButton.addEventListener("click", async () => {
-    if (!supabase) {
-      return;
-    }
-
-    await supabase.auth.signOut();
+    await api("/api/auth/logout", { method: "POST" });
     auth.authenticated = false;
-    auth.user = null;
+    elements.loginPassword.value = "";
+    elements.loginError.textContent = "";
     setSyncStatus("로그인 필요");
-    openAuthOverlay("");
     renderApp();
+    openLoginOverlay("");
   });
-
-  if (supabase) {
-    supabase.auth.onAuthStateChange(async (_event, session) => {
-      auth.authenticated = Boolean(session);
-      auth.user = session?.user ?? null;
-
-      if (session) {
-        await loadRemoteState();
-        closeAuthOverlay();
-      } else {
-        setSyncStatus("로그인 필요");
-        openAuthOverlay("");
-      }
-
-      renderApp();
-    });
-  }
 }
 
 async function bootstrapSession() {
@@ -195,109 +157,62 @@ async function bootstrapSession() {
     state = cachedState;
   }
 
+  setSyncStatus("세션 확인 중");
   renderApp();
 
-  if (!supabase) {
+  try {
+    const session = await api("/api/auth/session");
+    auth.authenticated = Boolean(session.authenticated);
     auth.loading = false;
-    setSyncStatus("Supabase 설정 필요");
-    openAuthOverlay("config.js 또는 Render 빌드 환경변수에 Supabase 값을 넣어야 한다.");
-    renderApp();
-    return;
-  }
 
-  setSyncStatus("세션 확인 중");
-
-  const { data, error } = await supabase.auth.getSession();
-  auth.loading = false;
-
-  if (error) {
-    setSyncStatus("세션 오류");
-    openAuthOverlay("세션 확인에 실패했다.");
-    renderApp();
-    return;
-  }
-
-  auth.authenticated = Boolean(data.session);
-  auth.user = data.session?.user ?? null;
-
-  if (data.session) {
-    await loadRemoteState();
-    closeAuthOverlay();
-  } else {
-    setSyncStatus("로그인 필요");
-    openAuthOverlay("");
+    if (auth.authenticated) {
+      await loadRemoteState();
+      closeLoginOverlay();
+    } else {
+      setSyncStatus("로그인 필요");
+      openLoginOverlay("");
+    }
+  } catch {
+    auth.loading = false;
+    setSyncStatus("서버 연결 안 됨");
+    openLoginOverlay("서버에 연결할 수 없다.");
   }
 
   renderApp();
 }
 
-async function authenticate() {
-  if (!supabase) {
-    openAuthOverlay("Supabase 설정이 없다.");
+async function login(password) {
+  if (!password) {
+    elements.loginError.textContent = "비밀번호를 입력해줘.";
     return;
   }
 
-  const email = elements.authEmail.value.trim();
-  const password = elements.authPassword.value;
+  elements.loginError.textContent = "";
+  setSyncStatus("로그인 중");
 
-  if (!email || !password) {
-    elements.authError.textContent = "이메일과 비밀번호를 입력해줘.";
-    return;
-  }
-
-  elements.authError.textContent = "";
-  setSyncStatus(auth.mode === "login" ? "로그인 중" : "가입 중");
-
-  if (auth.mode === "signup") {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
+  try {
+    await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
     });
 
-    if (error) {
-      elements.authError.textContent = error.message;
-      setSyncStatus("가입 실패");
-      return;
-    }
-
-    auth.mode = "login";
-    renderAuthOverlay();
-    elements.authError.textContent = "가입이 완료됐다. 이메일 인증이 꺼져 있으면 바로 로그인된다.";
-    setSyncStatus("가입 완료");
-    return;
-  }
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    elements.authError.textContent = error.message;
+    auth.authenticated = true;
+    elements.loginPassword.value = "";
+    await loadRemoteState();
+    closeLoginOverlay();
+    renderApp();
+  } catch (error) {
+    auth.authenticated = false;
     setSyncStatus("로그인 실패");
+    elements.loginError.textContent = error.message || "로그인에 실패했다.";
+    openLoginOverlay("");
   }
 }
 
 async function loadRemoteState() {
-  if (!supabase || !auth.user) {
-    return;
-  }
-
   setSyncStatus("서버에서 불러오는 중");
-
-  const { data, error } = await supabase
-    .from("app_state")
-    .select("state, updated_at")
-    .eq("user_id", auth.user.id)
-    .maybeSingle();
-
-  if (error) {
-    setSyncStatus("불러오기 실패");
-    openAuthOverlay(error.message);
-    return;
-  }
-
-  const remoteState = normalizeState(data?.state);
+  const response = await api("/api/state");
+  const remoteState = normalizeState(response.state);
   const legacyState = loadLegacyState();
 
   if (isStateEmpty(remoteState) && legacyState && !isStateEmpty(legacyState)) {
@@ -313,32 +228,18 @@ async function loadRemoteState() {
 }
 
 async function persistState(statusText = "저장 중") {
-  if (!supabase || !auth.user) {
-    setSyncStatus("로그인 필요");
-    return;
-  }
-
   cacheState(state);
   setSyncStatus(statusText);
 
-  const payload = {
-    user_id: auth.user.id,
-    state,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabase
-    .from("app_state")
-    .upsert(payload, {
-      onConflict: "user_id",
+  try {
+    await api("/api/state", {
+      method: "PUT",
+      body: JSON.stringify({ state }),
     });
-
-  if (error) {
+    setSyncStatus("저장됨");
+  } catch {
     setSyncStatus("저장 실패");
-    return;
   }
-
-  setSyncStatus("저장됨");
 }
 
 function loadLegacyState() {
@@ -386,13 +287,9 @@ function renderApp() {
 
 function renderAuthState() {
   elements.logoutButton.hidden = !auth.authenticated;
-  renderAuthOverlay();
-}
-
-function renderAuthOverlay() {
-  elements.authModeLabel.textContent = auth.mode === "login" ? "로그인" : "회원가입";
-  elements.authSubmit.textContent = auth.mode === "login" ? "로그인" : "회원가입";
-  elements.authToggle.textContent = auth.mode === "login" ? "처음이면 회원가입" : "이미 계정이 있으면 로그인";
+  if (auth.loading) {
+    setSyncStatus("세션 확인 중");
+  }
 }
 
 function renderWeekdays() {
@@ -562,7 +459,7 @@ function renderFixedList(container, kind) {
 
 async function realizeFixedItem(id) {
   if (!auth.authenticated) {
-    openAuthOverlay("먼저 로그인해줘.");
+    openLoginOverlay("먼저 비밀번호를 입력해줘.");
     return;
   }
 
@@ -664,16 +561,40 @@ function setSyncStatus(text) {
   elements.syncStatus.textContent = text;
 }
 
-function openAuthOverlay(message) {
+function openLoginOverlay(message) {
   elements.loginOverlay.hidden = false;
-  if (message) {
-    elements.authError.textContent = message;
-  }
+  elements.loginError.textContent = message;
 }
 
-function closeAuthOverlay() {
+function closeLoginOverlay() {
   elements.loginOverlay.hidden = true;
-  elements.authError.textContent = "";
+  elements.loginError.textContent = "";
+}
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    const error = new Error(payload.error || "요청에 실패했다.");
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload;
 }
 
 function formatMoney(value) {
