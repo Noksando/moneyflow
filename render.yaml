@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: personal-finance-calendar
+    runtime: static
+    buildCommand: ./scripts/build.sh
+    staticPublishPath: ./dist
+    autoDeployTrigger: commit
+    previews:
+      generation: automatic
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+      - path: /service-worker.js
+        name: Cache-Control
+        value: no-cache

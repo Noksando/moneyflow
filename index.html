@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Finance Calendar</title>
+  <meta name="description" content="달력 중심으로 수입, 지출, 예정, 확정을 정리하는 개인 재정 앱">
+  <meta name="theme-color" content="#f4eee5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="돈 달력">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Monthly Overview</p>
+        <h1>나를 위한 돈 달력</h1>
+        <p class="subtitle">예정과 확정을 분리해서, 한 달의 흐름을 한 화면에서 본다.</p>
+      </div>
+      <div class="month-switcher">
+        <button id="prev-month" type="button" aria-label="이전 달">←</button>
+        <h2 id="month-label"></h2>
+        <button id="next-month" type="button" aria-label="다음 달">→</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel calendar-panel">
+        <div class="calendar-header" id="weekday-row"></div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel summary-panel">
+          <div class="panel-title-row">
+            <h3>이번 달 정산</h3>
+            <span id="net-status" class="status-pill"></span>
+          </div>
+          <div class="summary-grid" id="summary-grid"></div>
+        </section>
+
+        <section class="panel form-panel">
+          <div class="panel-title-row">
+            <h3>하루 기록</h3>
+            <span id="selected-date-label" class="muted-text"></span>
+          </div>
+          <form id="entry-form" class="stack">
+            <label>
+              <span>날짜</span>
+              <input id="entry-date" name="date" type="date" required>
+            </label>
+            <div class="field-row">
+              <label>
+                <span>종류</span>
+                <select id="entry-kind" name="kind">
+                  <option value="income">수입</option>
+                  <option value="expense">지출</option>
+                </select>
+              </label>
+              <label>
+                <span>금액</span>
+                <input id="entry-amount" name="amount" type="number" min="0" step="100" placeholder="0" required>
+              </label>
+            </div>
+            <label>
+              <span>메모</span>
+              <input id="entry-note" name="note" type="text" maxlength="60" placeholder="짧게 메모">
+            </label>
+            <button class="primary-button" type="submit">기록 추가</button>
+          </form>
+        </section>
+
+        <section class="panel fixed-panel">
+          <div class="panel-title-row">
+            <h3>고정 항목</h3>
+            <span class="muted-text">예정일 포함</span>
+          </div>
+          <form id="fixed-form" class="stack compact-form">
+            <div class="field-row">
+              <label>
+                <span>종류</span>
+                <select id="fixed-kind" name="kind">
+                  <option value="income">고정 수입</option>
+                  <option value="expense">고정 지출</option>
+                </select>
+              </label>
+              <label>
+                <span>예정일</span>
+                <input id="fixed-day" name="scheduledDay" type="number" min="1" max="31" placeholder="25" required>
+              </label>
+            </div>
+            <label>
+              <span>항목명</span>
+              <input id="fixed-title" name="title" type="text" maxlength="40" placeholder="월급 / 월세" required>
+            </label>
+            <label>
+              <span>금액</span>
+              <input id="fixed-amount" name="amount" type="number" min="0" step="100" placeholder="0" required>
+            </label>
+            <button class="secondary-button" type="submit">고정 항목 추가</button>
+          </form>
+
+          <div class="fixed-lists">
+            <div>
+              <div class="list-heading">고정 수입</div>
+              <div id="fixed-income-list" class="item-list"></div>
+            </div>
+            <div>
+              <div class="list-heading">고정 지출</div>
+              <div id="fixed-expense-list" class="item-list"></div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <template id="summary-item-template">
+    <div class="summary-card">
+      <div class="summary-label"></div>
+      <div class="summary-value"></div>
+    </div>
+  </template>
+
+  <template id="fixed-item-template">
+    <article class="fixed-item">
+      <div class="fixed-item-copy">
+        <div class="fixed-title-row">
+          <strong class="fixed-title"></strong>
+          <span class="status-pill fixed-status"></span>
+        </div>
+        <div class="fixed-meta"></div>
+      </div>
+      <div class="fixed-actions">
+        <button class="ghost-button realize-button" type="button">realize</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

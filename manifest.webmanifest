@@ -1,0 +1,18 @@
+{
+  "name": "나를 위한 돈 달력",
+  "short_name": "돈 달력",
+  "description": "수입, 지출, 예정, 확정을 달력 중심으로 정리하는 개인 재정 앱",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4eee5",
+  "theme_color": "#f4eee5",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
