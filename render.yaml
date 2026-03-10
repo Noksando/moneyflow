@@ -13,10 +13,6 @@ services:
         value: 22
       - key: DATA_FILE
         value: /var/data/moneyflow.json
-      - key: JWT_SECRET
-        generateValue: true
-      - key: APP_PASSWORD
-        sync: false
     disk:
       name: moneyflow-data
       mountPath: /var/data

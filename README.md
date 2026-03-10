@@ -9,7 +9,6 @@
 - `확정`과 `예정` 금액을 다른 톤으로 표시
 - 고정 수입 / 고정 지출 리스트
 - `realize`로 열린 항목을 닫힌 항목으로 확정 반영
-- 단일 사용자 비밀번호 로그인
 - Render persistent disk 기반 서버 저장과 기기 간 동기화
 - PWA 기본 설정과 오프라인 셸 캐시
 
@@ -27,8 +26,6 @@ cp .env.example .env
 
 ```bash
 DATA_FILE=./data/moneyflow.json
-APP_PASSWORD=your-password
-JWT_SECRET=replace-this-secret
 ```
 
 2. 의존성을 설치하고 서버를 시작한다.
@@ -49,7 +46,6 @@ npm start
 3. Render Dashboard에서 `New > Blueprint`를 선택한다.
 4. GitHub 저장소를 연결한다.
 5. `render.yaml`을 사용하면 Node 웹 서비스와 영구 디스크가 같이 만들어진다.
-6. `APP_PASSWORD` 값을 Render 환경 변수 화면에서 직접 입력한다.
 
 수동으로 만들 경우 Render 설정은 다음과 같다.
 
@@ -62,15 +58,13 @@ npm start
 - Disk: `/var/data`, `1GB`
 - Environment Variables:
   - `DATA_FILE` = `/var/data/moneyflow.json`
-  - `APP_PASSWORD` = 네가 쓸 비밀번호
-  - `JWT_SECRET` = 랜덤 긴 문자열
 
 ## Important Limitation
 
-현재는 `단일 사용자 비밀번호` 구조다. 그래서:
+현재는 로그인 없이 바로 열리는 구조다. 그래서:
 
-- 네 개인용으로는 충분하지만 여러 사용자 계정 구조는 아니다.
-- 비밀번호를 잊으면 별도 복구 기능은 없다.
+- URL을 아는 사람은 누구나 접근할 수 있다.
+- 완전 개인용 비공개 툴로만 쓰는 게 맞다.
 - 오프라인 셸은 남아 있지만, 새 데이터 저장은 서버 연결이 필요하다.
 
 `sushibap-settlement-app`처럼 DB 대신 Render persistent disk에 JSON 파일로 저장한다. 그래서 Postgres를 따로 만들 필요가 없고, 구조가 더 단순하다.

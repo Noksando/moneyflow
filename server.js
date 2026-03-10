@@ -3,20 +3,14 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
-const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken");
 
 const PORT = Number(process.env.PORT || 3000);
-const JWT_SECRET = process.env.JWT_SECRET || "development-secret";
-const APP_PASSWORD = process.env.APP_PASSWORD || "change-me";
-const COOKIE_NAME = "moneyflow_session";
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data", "moneyflow.json");
 
 const app = express();
 let state = readState();
 
 app.use(express.json({ limit: "1mb" }));
-app.use(cookieParser());
 app.use(express.static(__dirname, {
   maxAge: "1h",
 }));
@@ -25,38 +19,7 @@ app.get("/api/health", (_request, response) => {
   response.json({ ok: true });
 });
 
-app.get("/api/auth/session", (request, response) => {
-  const session = readSession(request);
-  response.json({ authenticated: Boolean(session) });
-});
-
-app.post("/api/auth/login", (request, response) => {
-  const { password } = request.body || {};
-  if (!password || password !== APP_PASSWORD) {
-    response.status(401).json({ error: "비밀번호가 맞지 않는다." });
-    return;
-  }
-
-  const token = jwt.sign({ role: "owner" }, JWT_SECRET, { expiresIn: "30d" });
-  response.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 1000 * 60 * 60 * 24 * 30,
-  });
-  response.json({ authenticated: true });
-});
-
-app.post("/api/auth/logout", (_request, response) => {
-  response.clearCookie(COOKIE_NAME, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
-  response.json({ ok: true });
-});
-
-app.get("/api/state", requireAuth, async (_request, response, next) => {
+app.get("/api/state", (_request, response, next) => {
   try {
     state = readState();
     response.json({
@@ -68,7 +31,7 @@ app.get("/api/state", requireAuth, async (_request, response, next) => {
   }
 });
 
-app.put("/api/state", requireAuth, async (request, response, next) => {
+app.put("/api/state", (request, response, next) => {
   try {
     const nextState = request.body ? request.body.state : null;
     if (!nextState || typeof nextState !== "object" || Array.isArray(nextState)) {
@@ -175,27 +138,4 @@ function formatDateKey(date) {
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
-}
-
-function requireAuth(request, response, next) {
-  const session = readSession(request);
-  if (!session) {
-    response.status(401).json({ error: "로그인이 필요하다." });
-    return;
-  }
-
-  next();
-}
-
-function readSession(request) {
-  const token = request.cookies[COOKIE_NAME];
-  if (!token) {
-    return null;
-  }
-
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch {
-    return null;
-  }
 }
