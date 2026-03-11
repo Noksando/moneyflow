@@ -126,24 +126,30 @@ h1 {
 .month-switcher button,
 .ghost-button,
 .primary-button,
-.secondary-button {
+.secondary-button,
+.realize-button,
+.delete-button {
   border: 0;
   border-radius: 999px;
   cursor: pointer;
-  transition: transform 140ms ease, background-color 140ms ease, opacity 140ms ease;
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
 }
 
 .month-switcher button {
   width: 36px;
   height: 36px;
-  background: white;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(109, 92, 78, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
   color: var(--text);
 }
 
 .month-switcher button:hover,
 .ghost-button:hover,
 .primary-button:hover,
-.secondary-button:hover {
+.secondary-button:hover,
+.realize-button:hover,
+.delete-button:hover {
   transform: translateY(-1px);
 }
 
@@ -381,54 +387,57 @@ select:focus {
 
 .primary-button,
 .secondary-button,
-.ghost-button {
-  padding: 12px 14px;
+.ghost-button,
+.realize-button,
+.delete-button {
+  min-height: 42px;
+  padding: 11px 15px;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
 }
 
 .primary-button {
-  background: #cda88f;
-  color: white;
+  color: #fff9f4;
+  background: linear-gradient(180deg, #cfa78c 0%, #be9579 100%);
+  box-shadow: 0 10px 24px rgba(162, 121, 93, 0.18);
 }
 
 .secondary-button {
-  background: #eadccf;
   color: var(--text);
+  background: linear-gradient(180deg, rgba(245, 236, 225, 0.95) 0%, rgba(233, 220, 207, 0.95) 100%);
+  border: 1px solid rgba(171, 142, 116, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .ghost-button {
-  background: rgba(255, 255, 255, 0.8);
   color: var(--text);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(109, 92, 78, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .realize-button {
-  padding: 10px 14px;
-  border: 0;
-  border-radius: 999px;
-  cursor: pointer;
-  color: #fffaf4;
-  background: linear-gradient(135deg, #8daea0 0%, #6f8f82 100%);
-  box-shadow: 0 10px 24px rgba(111, 143, 130, 0.22);
-  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+  color: #486457;
+  background: linear-gradient(180deg, rgba(223, 238, 229, 0.98) 0%, rgba(184, 220, 197, 0.98) 100%);
+  border: 1px solid rgba(94, 130, 109, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 20px rgba(127, 158, 141, 0.12);
 }
 
 .realize-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(111, 143, 130, 0.28);
+  border-color: rgba(94, 130, 109, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), 0 12px 24px rgba(127, 158, 141, 0.16);
 }
 
 .delete-button {
-  padding: 10px 14px;
-  border: 0;
-  border-radius: 999px;
-  cursor: pointer;
-  color: #7a4d4a;
-  background: rgba(235, 192, 191, 0.35);
-  transition: transform 140ms ease, background-color 140ms ease;
+  color: #8d5b58;
+  background: linear-gradient(180deg, rgba(248, 235, 233, 0.95) 0%, rgba(235, 192, 191, 0.8) 100%);
+  border: 1px solid rgba(168, 114, 114, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 
 .delete-button:hover {
-  transform: translateY(-1px);
-  background: rgba(235, 192, 191, 0.55);
+  border-color: rgba(168, 114, 114, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 10px 20px rgba(178, 133, 130, 0.12);
 }
 
 .fixed-lists {
@@ -506,6 +515,14 @@ select:focus {
   min-width: 0;
 }
 
+.fixed-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .fixed-title-row {
   display: flex;
   align-items: center;
@@ -571,6 +588,18 @@ select:focus {
   .field-row,
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .fixed-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .realize-button,
+  .delete-button {
+    min-height: 38px;
+    padding: 9px 12px;
+    font-size: 0.82rem;
   }
 
   .weekday {
