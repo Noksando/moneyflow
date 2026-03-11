@@ -125,8 +125,8 @@ function normalizeState(candidate) {
     fixedItems: Array.isArray(parsed.fixedItems)
       ? parsed.fixedItems.map((item) => ({
           ...item,
-          monthKey: item.monthKey || fallbackMonthKey,
-          status: item.status === "closed" ? "closed" : "open",
+          activeFromMonth: item.activeFromMonth || item.monthKey || fallbackMonthKey,
+          monthlyStates: normalizeMonthlyStates(item, item.monthKey),
         }))
       : [],
   };
@@ -138,4 +138,19 @@ function formatDateKey(date) {
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
+}
+
+function normalizeMonthlyStates(item, legacyMonthKey) {
+  const next = item.monthlyStates && typeof item.monthlyStates === "object"
+    ? { ...item.monthlyStates }
+    : {};
+
+  if (legacyMonthKey && item.status === "closed") {
+    next[legacyMonthKey] = {
+      status: "closed",
+      realizedDate: item.realizedDate || null,
+    };
+  }
+
+  return next;
 }

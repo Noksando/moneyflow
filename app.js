@@ -59,8 +59,8 @@ function normalizeState(candidate) {
     fixedItems: Array.isArray(parsed.fixedItems)
       ? parsed.fixedItems.map((item) => ({
           ...item,
-          monthKey: item.monthKey || fallbackMonthKey,
-          status: item.status === "closed" ? "closed" : "open",
+          activeFromMonth: item.activeFromMonth || item.monthKey || fallbackMonthKey,
+          monthlyStates: normalizeMonthlyStates(item, item.monthKey),
         }))
       : [],
   };
@@ -106,9 +106,8 @@ function bindEvents() {
       title: document.querySelector("#fixed-title").value.trim(),
       amount: Number(document.querySelector("#fixed-amount").value),
       scheduledDay: Number(document.querySelector("#fixed-day").value),
-      monthKey: `${state.viewYear}-${String(state.viewMonth + 1).padStart(2, "0")}`,
-      status: "open",
-      realizedDate: null,
+      activeFromMonth: `${state.viewYear}-${String(state.viewMonth + 1).padStart(2, "0")}`,
+      monthlyStates: {},
     });
 
     cacheState(state);
@@ -362,7 +361,7 @@ function renderFixedLists() {
 
 function renderFixedList(container, kind) {
   const activeMonthKey = `${state.viewYear}-${String(state.viewMonth + 1).padStart(2, "0")}`;
-  const items = state.fixedItems.filter((item) => item.kind === kind && item.monthKey === activeMonthKey);
+  const items = state.fixedItems.filter((item) => item.kind === kind && isFixedActiveForMonth(item, activeMonthKey));
   container.innerHTML = "";
 
   if (items.length === 0) {
@@ -378,14 +377,15 @@ function renderFixedList(container, kind) {
     node.querySelector(".fixed-title").textContent = item.title;
 
     const status = node.querySelector(".fixed-status");
-    const isOpen = item.status === "open";
+    const monthState = getFixedMonthState(item, activeMonthKey);
+    const isOpen = monthState.status === "open";
     status.textContent = isOpen ? "열린 상태" : "닫힌 상태";
     status.className = `status-pill fixed-status ${isOpen ? "is-open" : `is-closed ${kind}`}`;
 
-    const dateText = item.realizedDate
-      ? `${item.scheduledDay}일 예정 · ${formatDisplayDate(item.realizedDate)} 확정`
+    const dateText = monthState.realizedDate
+      ? `${item.scheduledDay}일 예정 · ${formatDisplayDate(monthState.realizedDate)} 확정`
       : `${item.scheduledDay}일 예정`;
-    node.querySelector(".fixed-meta").textContent = `${formatMonthKey(item.monthKey)} · ${formatKindLabel(kind)} ${formatMoney(item.amount)} · ${dateText}`;
+    node.querySelector(".fixed-meta").textContent = `${formatMonthKey(activeMonthKey)}부터 반복 · ${formatKindLabel(kind)} ${formatMoney(item.amount)} · ${dateText}`;
 
     const button = node.querySelector(".realize-button");
     button.disabled = !isOpen;
@@ -399,7 +399,8 @@ function renderFixedList(container, kind) {
 
 async function realizeFixedItem(id) {
   const item = state.fixedItems.find((target) => target.id === id);
-  if (!item || item.status === "closed") {
+  const activeMonthKey = `${state.viewYear}-${String(state.viewMonth + 1).padStart(2, "0")}`;
+  if (!item || !isFixedActiveForMonth(item, activeMonthKey) || getFixedMonthState(item, activeMonthKey).status === "closed") {
     return;
   }
 
@@ -415,8 +416,10 @@ async function realizeFixedItem(id) {
     return;
   }
 
-  item.status = "closed";
-  item.realizedDate = input;
+  item.monthlyStates[activeMonthKey] = {
+    status: "closed",
+    realizedDate: input,
+  };
 
   state.entries.push({
     id: crypto.randomUUID(),
@@ -443,11 +446,12 @@ function hydrateSelection() {
 function getDailyTotals(dateKey) {
   const realized = state.entries.filter((entry) => entry.date === dateKey);
   const planned = state.fixedItems.filter((item) => {
-    if (item.status !== "open") {
+    const monthKey = dateKey.slice(0, 7);
+    if (!isFixedActiveForMonth(item, monthKey)) {
       return false;
     }
 
-    return item.monthKey === dateKey.slice(0, 7) && item.scheduledDay === Number(dateKey.slice(-2));
+    return getFixedMonthState(item, monthKey).status === "open" && item.scheduledDay === Number(dateKey.slice(-2));
   });
 
   return {
@@ -462,7 +466,7 @@ function getDailyTotals(dateKey) {
 function getMonthlyStats(year, month) {
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
   const realized = state.entries.filter((entry) => entry.date.startsWith(monthKey));
-  const planned = state.fixedItems.filter((item) => item.status === "open" && item.monthKey === monthKey);
+  const planned = state.fixedItems.filter((item) => isFixedActiveForMonth(item, monthKey) && getFixedMonthState(item, monthKey).status === "open");
 
   return {
     realizedIncome: sumAmounts(realized, "income"),
@@ -520,7 +524,10 @@ function setSyncStatus(text) {
 }
 
 function formatMoney(value) {
-  return new Intl.NumberFormat("ko-KR").format(value);
+  return new Intl.NumberFormat("ko-KR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function formatSignedMoney(value) {
@@ -556,6 +563,29 @@ function formatKindLabel(kind) {
 function formatMonthKey(monthKey) {
   const [year, month] = monthKey.split("-").map(Number);
   return `${year}년 ${month}월`;
+}
+
+function isFixedActiveForMonth(item, monthKey) {
+  return (item.activeFromMonth || "") <= monthKey;
+}
+
+function getFixedMonthState(item, monthKey) {
+  return item.monthlyStates?.[monthKey] || { status: "open", realizedDate: null };
+}
+
+function normalizeMonthlyStates(item, legacyMonthKey) {
+  const next = item.monthlyStates && typeof item.monthlyStates === "object"
+    ? { ...item.monthlyStates }
+    : {};
+
+  if (legacyMonthKey && item.status === "closed") {
+    next[legacyMonthKey] = {
+      status: "closed",
+      realizedDate: item.realizedDate || null,
+    };
+  }
+
+  return next;
 }
 
 function registerServiceWorker() {
