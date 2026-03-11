@@ -536,13 +536,19 @@ function formatMonthKey(monthKey) {
 }
 
 function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) {
+  if (!("serviceWorker" in navigator) || !("caches" in window)) {
     return;
   }
 
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {
-      // Keep the app usable even if offline support registration fails.
-    });
+  window.addEventListener("load", async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+
+      const cacheKeys = await caches.keys();
+      await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+    } catch {
+      // Keep the app usable even if cache cleanup fails.
+    }
   });
 }
