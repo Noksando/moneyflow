@@ -108,6 +108,7 @@ function createEmptyState() {
       selectedDate: formatDateKey(new Date()),
       entries: [],
       fixedItems: [],
+      assetFlows: [],
     },
     updatedAt: null,
   };
@@ -122,6 +123,7 @@ function normalizeState(candidate) {
     ...baseState,
     ...parsed,
     entries: Array.isArray(parsed.entries) ? parsed.entries.map(normalizeEntry) : [],
+    assetFlows: Array.isArray(parsed.assetFlows) ? parsed.assetFlows.map(normalizeAssetFlow) : [],
     fixedItems: Array.isArray(parsed.fixedItems)
       ? parsed.fixedItems.map((item) => ({
           ...item,
@@ -175,4 +177,16 @@ function normalizeEntryKind(kind) {
   }
 
   return kind === "expense" ? "expense" : "income";
+}
+
+function normalizeAssetFlow(flow) {
+  return {
+    id: flow.id || `asset-${Date.now()}-${Math.random()}`,
+    date: typeof flow.date === "string" && flow.date ? flow.date : formatDateKey(new Date()),
+    bucket: flow.bucket === "investment" ? "investment" : "savings",
+    direction: flow.direction === "out" ? "out" : "in",
+    amount: Number(flow.amount || 0),
+    note: typeof flow.note === "string" ? flow.note : "",
+    createdAt: flow.createdAt || new Date().toISOString(),
+  };
 }

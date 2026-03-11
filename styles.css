@@ -314,6 +314,81 @@ h1 {
   gap: 18px;
 }
 
+.asset-panel {
+  margin-top: 20px;
+  padding: 24px;
+}
+
+.asset-header {
+  margin-bottom: 18px;
+}
+
+.asset-subtitle {
+  max-width: 720px;
+}
+
+.asset-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.asset-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.asset-card.savings {
+  background: linear-gradient(180deg, rgba(223, 238, 229, 0.7) 0%, rgba(255, 255, 255, 0.62) 100%);
+}
+
+.asset-card.investment {
+  background: linear-gradient(180deg, rgba(233, 220, 207, 0.78) 0%, rgba(255, 255, 255, 0.62) 100%);
+}
+
+.asset-entry,
+.asset-history {
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid var(--line);
+}
+
+.asset-row {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.asset-flow-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--line);
+}
+
+.asset-flow-copy {
+  min-width: 0;
+}
+
+.asset-flow-meta {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.asset-flow-badge.savings {
+  background: var(--income-soft);
+  color: #4f7d66;
+}
+
+.asset-flow-badge.investment {
+  background: rgba(233, 220, 207, 0.95);
+  color: #7a6250;
+}
+
 .summary-panel,
 .form-panel,
 .day-items-panel,
@@ -577,6 +652,10 @@ select:focus {
   .layout {
     grid-template-columns: 1fr;
   }
+
+  .asset-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -610,6 +689,21 @@ select:focus {
 
   .field-row,
   .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-panel {
+    margin-top: 16px;
+    padding: 16px;
+  }
+
+  .asset-entry,
+  .asset-history {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .asset-row {
     grid-template-columns: 1fr;
   }
 

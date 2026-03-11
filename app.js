@@ -11,16 +11,26 @@ const elements = {
   selectedDateLabel: document.querySelector("#selected-date-label"),
   entryForm: document.querySelector("#entry-form"),
   fixedForm: document.querySelector("#fixed-form"),
+  assetForm: document.querySelector("#asset-form"),
   entryDate: document.querySelector("#entry-date"),
   entryKind: document.querySelector("#entry-kind"),
   entryAmount: document.querySelector("#entry-amount"),
   entryNote: document.querySelector("#entry-note"),
+  assetBucket: document.querySelector("#asset-bucket"),
+  assetDirection: document.querySelector("#asset-direction"),
+  assetDate: document.querySelector("#asset-date"),
+  assetAmount: document.querySelector("#asset-amount"),
+  assetNote: document.querySelector("#asset-note"),
   fixedIncomeList: document.querySelector("#fixed-income-list"),
   fixedExpenseList: document.querySelector("#fixed-expense-list"),
   dayEntryList: document.querySelector("#day-entry-list"),
+  assetFlowList: document.querySelector("#asset-flow-list"),
+  savingsTotal: document.querySelector("#savings-total"),
+  investmentTotal: document.querySelector("#investment-total"),
   summaryTemplate: document.querySelector("#summary-item-template"),
   fixedItemTemplate: document.querySelector("#fixed-item-template"),
   dayEntryTemplate: document.querySelector("#day-entry-template"),
+  assetFlowTemplate: document.querySelector("#asset-flow-template"),
   prevMonth: document.querySelector("#prev-month"),
   nextMonth: document.querySelector("#next-month"),
   syncStatus: document.querySelector("#sync-status"),
@@ -46,6 +56,7 @@ function createDefaultState() {
     selectedDate: formatDateKey(today),
     entries: [],
     fixedItems: [],
+    assetFlows: [],
   };
 }
 
@@ -59,6 +70,9 @@ function normalizeState(candidate) {
     ...parsed,
     entries: Array.isArray(parsed.entries)
       ? parsed.entries.map(normalizeEntry)
+      : [],
+    assetFlows: Array.isArray(parsed.assetFlows)
+      ? parsed.assetFlows.map(normalizeAssetFlow)
       : [],
     fixedItems: Array.isArray(parsed.fixedItems)
       ? parsed.fixedItems.map((item) => ({
@@ -118,6 +132,28 @@ function bindEvents() {
 
     cacheState(state);
     elements.fixedForm.reset();
+    renderApp();
+    await persistState();
+  });
+
+  elements.assetForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    state.assetFlows.unshift(normalizeAssetFlow({
+      id: crypto.randomUUID(),
+      date: elements.assetDate.value,
+      bucket: elements.assetBucket.value,
+      direction: elements.assetDirection.value,
+      amount: Number(elements.assetAmount.value),
+      note: elements.assetNote.value.trim(),
+      createdAt: new Date().toISOString(),
+    }));
+
+    cacheState(state);
+    elements.assetForm.reset();
+    elements.assetBucket.value = "savings";
+    elements.assetDirection.value = "in";
+    elements.assetDate.value = state.selectedDate;
     renderApp();
     await persistState();
   });
@@ -199,7 +235,7 @@ function cacheState(nextState) {
 }
 
 function isStateEmpty(candidate) {
-  return candidate.entries.length === 0 && candidate.fixedItems.length === 0;
+  return candidate.entries.length === 0 && candidate.fixedItems.length === 0 && candidate.assetFlows.length === 0;
 }
 
 function renderApp() {
@@ -208,6 +244,7 @@ function renderApp() {
   renderSummary();
   renderDayEntries();
   renderFixedLists();
+  renderAssetPanel();
   hydrateSelection();
 }
 
@@ -380,6 +417,45 @@ function renderSummary() {
 
   const net = stats.realizedIncome - stats.realizedExpense;
   elements.netStatus.textContent = net >= 0 ? "확정 흑자" : "확정 적자";
+}
+
+function renderAssetPanel() {
+  const totals = getAssetTotals();
+  elements.savingsTotal.textContent = formatSignedMoney(totals.savings);
+  elements.investmentTotal.textContent = formatSignedMoney(totals.investment);
+
+  const recentFlows = [...state.assetFlows]
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .slice(0, 12);
+
+  elements.assetFlowList.innerHTML = "";
+
+  if (recentFlows.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "아직 저축이나 투자 흐름 기록이 없다.";
+    elements.assetFlowList.append(empty);
+    return;
+  }
+
+  recentFlows.forEach((flow) => {
+    const node = elements.assetFlowTemplate.content.firstElementChild.cloneNode(true);
+    node.querySelector(".asset-flow-title").textContent = `${formatAssetBucket(flow.bucket)} ${flow.direction === "in" ? "넣기" : "빼기"} ${flow.direction === "in" ? "+" : "-"}${formatMoney(flow.amount)}`;
+
+    const badge = node.querySelector(".asset-flow-badge");
+    badge.textContent = flow.bucket === "investment" ? "투자" : "저축";
+    badge.className = `status-pill asset-flow-badge ${flow.bucket}`;
+
+    const noteText = flow.note ? ` · ${flow.note}` : "";
+    node.querySelector(".asset-flow-meta").textContent = `${formatDisplayDate(flow.date)}${noteText}`;
+
+    const deleteButton = node.querySelector(".asset-delete-button");
+    deleteButton.addEventListener("click", async () => {
+      await deleteAssetFlow(flow.id);
+    });
+
+    elements.assetFlowList.append(node);
+  });
 }
 
 function renderDayEntries() {
@@ -573,9 +649,26 @@ async function deleteFixedItem(id) {
   await persistState();
 }
 
+async function deleteAssetFlow(id) {
+  const flow = state.assetFlows.find((target) => target.id === id);
+  if (!flow) {
+    return;
+  }
+
+  if (!window.confirm("이 저축/투자 흐름을 삭제할까?")) {
+    return;
+  }
+
+  state.assetFlows = state.assetFlows.filter((target) => target.id !== id);
+  cacheState(state);
+  renderApp();
+  await persistState();
+}
+
 function hydrateSelection() {
   elements.entryDate.value = state.selectedDate;
   elements.selectedDateLabel.textContent = formatDisplayDate(state.selectedDate);
+  elements.assetDate.value = state.selectedDate;
 }
 
 function getDailyTotals(dateKey) {
@@ -697,6 +790,10 @@ function formatKindLabel(kind) {
   return kind === "income" ? "수입" : "지출";
 }
 
+function formatAssetBucket(bucket) {
+  return bucket === "investment" ? "투자" : "저축";
+}
+
 function formatSignedMoneyByKind(kind, amount) {
   return `${kind === "income" ? "+" : "-"}${formatMoney(amount)}`;
 }
@@ -753,6 +850,30 @@ function normalizeEntryKind(kind) {
 
 function isOpenKind(kind) {
   return kind === "open_income" || kind === "open_expense";
+}
+
+function normalizeAssetFlow(flow) {
+  return {
+    id: flow.id || crypto.randomUUID(),
+    date: typeof flow.date === "string" && flow.date ? flow.date : formatDateKey(today),
+    bucket: flow.bucket === "investment" ? "investment" : "savings",
+    direction: flow.direction === "out" ? "out" : "in",
+    amount: Number(flow.amount || 0),
+    note: typeof flow.note === "string" ? flow.note : "",
+    createdAt: flow.createdAt || new Date().toISOString(),
+  };
+}
+
+function getAssetTotals() {
+  return state.assetFlows.reduce((acc, flow) => {
+    const signedAmount = flow.direction === "out" ? -flow.amount : flow.amount;
+    if (flow.bucket === "investment") {
+      acc.investment += signedAmount;
+    } else {
+      acc.savings += signedAmount;
+    }
+    return acc;
+  }, { savings: 0, investment: 0 });
 }
 
 function registerServiceWorker() {

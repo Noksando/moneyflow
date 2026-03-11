@@ -130,6 +130,77 @@
         </section>
       </aside>
     </main>
+
+    <section class="panel asset-panel">
+      <div class="asset-header">
+        <div>
+          <p class="eyebrow">Asset Flow</p>
+          <h3>저축과 투자 흐름</h3>
+          <p class="subtitle asset-subtitle">달력과 별개로, 쌓인 돈과 빠져나간 돈의 흐름만 이어서 본다.</p>
+        </div>
+      </div>
+
+      <div class="asset-grid">
+        <div class="asset-summary">
+          <div class="summary-card asset-card savings">
+            <div class="summary-label">현재 저축 총액</div>
+            <div id="savings-total" class="summary-value">0</div>
+          </div>
+          <div class="summary-card asset-card investment">
+            <div class="summary-label">현재 투자 총액</div>
+            <div id="investment-total" class="summary-value">0</div>
+          </div>
+        </div>
+
+        <section class="asset-entry">
+          <div class="panel-title-row">
+            <h3>흐름 기록</h3>
+            <span class="muted-text">넣기 / 빼기</span>
+          </div>
+          <form id="asset-form" class="stack">
+            <div class="field-row asset-row">
+              <label>
+                <span>구분</span>
+                <select id="asset-bucket" name="bucket">
+                  <option value="savings">저축</option>
+                  <option value="investment">투자</option>
+                </select>
+              </label>
+              <label>
+                <span>동작</span>
+                <select id="asset-direction" name="direction">
+                  <option value="in">넣기</option>
+                  <option value="out">빼기</option>
+                </select>
+              </label>
+              <label>
+                <span>날짜</span>
+                <input id="asset-date" name="date" type="date" required>
+              </label>
+            </div>
+            <div class="field-row asset-row">
+              <label>
+                <span>금액</span>
+                <input id="asset-amount" name="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required>
+              </label>
+              <label>
+                <span>용도 메모</span>
+                <input id="asset-note" name="note" type="text" maxlength="80" placeholder="비상금 / ETF / 여행통장">
+              </label>
+            </div>
+            <button class="secondary-button" type="submit">흐름 추가</button>
+          </form>
+        </section>
+      </div>
+
+      <section class="asset-history">
+        <div class="panel-title-row">
+          <h3>최근 흐름</h3>
+          <span class="muted-text">최신순</span>
+        </div>
+        <div id="asset-flow-list" class="item-list"></div>
+      </section>
+    </section>
   </div>
 
   <template id="summary-item-template">
@@ -167,6 +238,21 @@
       <div class="fixed-actions">
         <button class="realize-button entry-realize-button" type="button">realize</button>
         <button class="delete-button entry-delete-button" type="button">삭제</button>
+      </div>
+    </article>
+  </template>
+
+  <template id="asset-flow-template">
+    <article class="asset-flow-item">
+      <div class="asset-flow-copy">
+        <div class="fixed-title-row">
+          <strong class="asset-flow-title"></strong>
+          <span class="status-pill asset-flow-badge"></span>
+        </div>
+        <div class="asset-flow-meta"></div>
+      </div>
+      <div class="fixed-actions">
+        <button class="delete-button asset-delete-button" type="button">삭제</button>
       </div>
     </article>
   </template>
