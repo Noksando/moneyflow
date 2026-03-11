@@ -287,6 +287,7 @@ h1 {
 
 .summary-panel,
 .form-panel,
+.day-items-panel,
 .fixed-panel {
   padding: 22px;
 }
@@ -436,6 +437,40 @@ select:focus {
   border: 1px solid var(--line);
 }
 
+.day-entry-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--line);
+}
+
+.day-entry-copy {
+  min-width: 0;
+}
+
+.day-entry-meta {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.day-entry-status.is-open {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.day-entry-status.is-closed.income {
+  background: var(--income-strong);
+  color: #35594a;
+}
+
+.day-entry-status.is-closed.expense {
+  background: var(--expense-strong);
+  color: #6d4141;
+}
+
 .fixed-item-copy {
   min-width: 0;
 }
@@ -496,6 +531,7 @@ select:focus {
   .calendar-panel,
   .summary-panel,
   .form-panel,
+  .day-items-panel,
   .fixed-panel {
     padding: 16px;
   }

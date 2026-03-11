@@ -121,7 +121,7 @@ function normalizeState(candidate) {
   return {
     ...baseState,
     ...parsed,
-    entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+    entries: Array.isArray(parsed.entries) ? parsed.entries.map(normalizeEntry) : [],
     fixedItems: Array.isArray(parsed.fixedItems)
       ? parsed.fixedItems.map((item) => ({
           ...item,
@@ -153,4 +153,26 @@ function normalizeMonthlyStates(item, legacyMonthKey) {
   }
 
   return next;
+}
+
+function normalizeEntry(entry) {
+  const nextKind = normalizeEntryKind(entry.kind);
+  return {
+    ...entry,
+    kind: nextKind,
+    status: entry.status === "open" || entry.kind === "open_income" || entry.kind === "open_expense" ? "open" : "closed",
+    createdAt: entry.createdAt || entry.realizedAt || new Date().toISOString(),
+  };
+}
+
+function normalizeEntryKind(kind) {
+  if (kind === "open_income") {
+    return "income";
+  }
+
+  if (kind === "open_expense") {
+    return "expense";
+  }
+
+  return kind === "expense" ? "expense" : "income";
 }

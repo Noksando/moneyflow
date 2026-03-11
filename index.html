@@ -62,6 +62,8 @@
                 <select id="entry-kind" name="kind">
                   <option value="income">수입</option>
                   <option value="expense">지출</option>
+                  <option value="open_income">열린 수입</option>
+                  <option value="open_expense">열린 지출</option>
                 </select>
               </label>
               <label>
@@ -75,6 +77,14 @@
             </label>
             <button class="primary-button" type="submit">기록 추가</button>
           </form>
+        </section>
+
+        <section class="panel day-items-panel">
+          <div class="panel-title-row">
+            <h3>선택한 날짜 항목</h3>
+            <span class="muted-text">열린 항목은 여기서 realize</span>
+          </div>
+          <div id="day-entry-list" class="item-list"></div>
         </section>
 
         <section class="panel fixed-panel">
@@ -140,6 +150,21 @@
       </div>
       <div class="fixed-actions">
         <button class="ghost-button realize-button" type="button">realize</button>
+      </div>
+    </article>
+  </template>
+
+  <template id="day-entry-template">
+    <article class="day-entry-item">
+      <div class="day-entry-copy">
+        <div class="fixed-title-row">
+          <strong class="day-entry-title"></strong>
+          <span class="status-pill day-entry-status"></span>
+        </div>
+        <div class="day-entry-meta"></div>
+      </div>
+      <div class="fixed-actions">
+        <button class="ghost-button entry-realize-button" type="button">realize</button>
       </div>
     </article>
   </template>

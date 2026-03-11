@@ -17,8 +17,10 @@ const elements = {
   entryNote: document.querySelector("#entry-note"),
   fixedIncomeList: document.querySelector("#fixed-income-list"),
   fixedExpenseList: document.querySelector("#fixed-expense-list"),
+  dayEntryList: document.querySelector("#day-entry-list"),
   summaryTemplate: document.querySelector("#summary-item-template"),
   fixedItemTemplate: document.querySelector("#fixed-item-template"),
+  dayEntryTemplate: document.querySelector("#day-entry-template"),
   prevMonth: document.querySelector("#prev-month"),
   nextMonth: document.querySelector("#next-month"),
   syncStatus: document.querySelector("#sync-status"),
@@ -55,7 +57,9 @@ function normalizeState(candidate) {
   return {
     ...baseState,
     ...parsed,
-    entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+    entries: Array.isArray(parsed.entries)
+      ? parsed.entries.map(normalizeEntry)
+      : [],
     fixedItems: Array.isArray(parsed.fixedItems)
       ? parsed.fixedItems.map((item) => ({
           ...item,
@@ -81,10 +85,12 @@ function bindEvents() {
     state.entries.push({
       id: crypto.randomUUID(),
       date: elements.entryDate.value,
-      kind: elements.entryKind.value,
+      kind: normalizeEntryKind(elements.entryKind.value),
+      status: isOpenKind(elements.entryKind.value) ? "open" : "closed",
       amount: Number(elements.entryAmount.value),
       note: elements.entryNote.value.trim(),
       source: "manual",
+      createdAt: new Date().toISOString(),
     });
 
     state.selectedDate = elements.entryDate.value;
@@ -200,6 +206,7 @@ function renderApp() {
   renderMonthLabel();
   renderCalendar();
   renderSummary();
+  renderDayEntries();
   renderFixedLists();
   hydrateSelection();
 }
@@ -354,6 +361,43 @@ function renderSummary() {
   elements.netStatus.textContent = net >= 0 ? "확정 흑자" : "확정 적자";
 }
 
+function renderDayEntries() {
+  const selectedEntries = state.entries
+    .filter((entry) => entry.date === state.selectedDate)
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+
+  elements.dayEntryList.innerHTML = "";
+
+  if (selectedEntries.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "이 날짜에는 아직 직접 기록한 항목이 없다.";
+    elements.dayEntryList.append(empty);
+    return;
+  }
+
+  selectedEntries.forEach((entry) => {
+    const node = elements.dayEntryTemplate.content.firstElementChild.cloneNode(true);
+    node.querySelector(".day-entry-title").textContent = `${formatKindLabel(entry.kind)} ${formatSignedMoneyByKind(entry.kind, entry.amount)}`;
+
+    const status = node.querySelector(".day-entry-status");
+    const isOpen = entry.status === "open";
+    status.textContent = isOpen ? "열린 상태" : "확정";
+    status.className = `status-pill day-entry-status ${isOpen ? "is-open" : `is-closed ${entry.kind}`}`;
+
+    const noteText = entry.note ? ` · ${entry.note}` : "";
+    node.querySelector(".day-entry-meta").textContent = `${formatDisplayDate(entry.date)}${noteText}`;
+
+    const button = node.querySelector(".entry-realize-button");
+    button.disabled = !isOpen;
+    button.addEventListener("click", async () => {
+      await realizeEntry(entry.id);
+    });
+
+    elements.dayEntryList.append(node);
+  });
+}
+
 function renderFixedLists() {
   renderFixedList(elements.fixedIncomeList, "income");
   renderFixedList(elements.fixedExpenseList, "expense");
@@ -438,13 +482,41 @@ async function realizeFixedItem(id) {
   await persistState();
 }
 
+async function realizeEntry(id) {
+  const entry = state.entries.find((target) => target.id === id);
+  if (!entry || entry.status !== "open") {
+    return;
+  }
+
+  const input = window.prompt("확정 날짜를 입력해줘. (YYYY-MM-DD)", state.selectedDate || entry.date);
+  if (!input) {
+    return;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input) || Number.isNaN(new Date(input).getTime())) {
+    window.alert("날짜 형식이 올바르지 않다. 예: 2026-03-25");
+    return;
+  }
+
+  entry.status = "closed";
+  entry.date = input;
+  entry.realizedAt = new Date().toISOString();
+
+  state.selectedDate = input;
+  syncViewToSelectedDate();
+  cacheState(state);
+  renderApp();
+  await persistState();
+}
+
 function hydrateSelection() {
   elements.entryDate.value = state.selectedDate;
   elements.selectedDateLabel.textContent = formatDisplayDate(state.selectedDate);
 }
 
 function getDailyTotals(dateKey) {
-  const realized = state.entries.filter((entry) => entry.date === dateKey);
+  const realized = state.entries.filter((entry) => entry.date === dateKey && entry.status === "closed");
+  const plannedEntries = state.entries.filter((entry) => entry.date === dateKey && entry.status === "open");
   const planned = state.fixedItems.filter((item) => {
     const monthKey = dateKey.slice(0, 7);
     if (!isFixedActiveForMonth(item, monthKey)) {
@@ -457,22 +529,23 @@ function getDailyTotals(dateKey) {
   return {
     realizedIncome: sumAmounts(realized, "income"),
     realizedExpense: sumAmounts(realized, "expense"),
-    plannedIncome: sumAmounts(planned, "income"),
-    plannedExpense: sumAmounts(planned, "expense"),
-    notesCount: realized.length,
+    plannedIncome: sumAmounts(planned, "income") + sumAmounts(plannedEntries, "income"),
+    plannedExpense: sumAmounts(planned, "expense") + sumAmounts(plannedEntries, "expense"),
+    notesCount: realized.length + plannedEntries.length,
   };
 }
 
 function getMonthlyStats(year, month) {
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
-  const realized = state.entries.filter((entry) => entry.date.startsWith(monthKey));
+  const realized = state.entries.filter((entry) => entry.date.startsWith(monthKey) && entry.status === "closed");
+  const plannedEntries = state.entries.filter((entry) => entry.date.startsWith(monthKey) && entry.status === "open");
   const planned = state.fixedItems.filter((item) => isFixedActiveForMonth(item, monthKey) && getFixedMonthState(item, monthKey).status === "open");
 
   return {
     realizedIncome: sumAmounts(realized, "income"),
     realizedExpense: sumAmounts(realized, "expense"),
-    plannedIncome: planned.filter((item) => item.kind === "income").reduce((sum, item) => sum + item.amount, 0),
-    plannedExpense: planned.filter((item) => item.kind === "expense").reduce((sum, item) => sum + item.amount, 0),
+    plannedIncome: planned.filter((item) => item.kind === "income").reduce((sum, item) => sum + item.amount, 0) + sumAmounts(plannedEntries, "income"),
+    plannedExpense: planned.filter((item) => item.kind === "expense").reduce((sum, item) => sum + item.amount, 0) + sumAmounts(plannedEntries, "expense"),
   };
 }
 
@@ -560,6 +633,10 @@ function formatKindLabel(kind) {
   return kind === "income" ? "수입" : "지출";
 }
 
+function formatSignedMoneyByKind(kind, amount) {
+  return `${kind === "income" ? "+" : "-"}${formatMoney(amount)}`;
+}
+
 function formatMonthKey(monthKey) {
   const [year, month] = monthKey.split("-").map(Number);
   return `${year}년 ${month}월`;
@@ -586,6 +663,32 @@ function normalizeMonthlyStates(item, legacyMonthKey) {
   }
 
   return next;
+}
+
+function normalizeEntry(entry) {
+  const nextKind = normalizeEntryKind(entry.kind);
+  return {
+    ...entry,
+    kind: nextKind,
+    status: entry.status === "open" || isOpenKind(entry.kind) ? "open" : "closed",
+    createdAt: entry.createdAt || entry.realizedAt || new Date().toISOString(),
+  };
+}
+
+function normalizeEntryKind(kind) {
+  if (kind === "open_income") {
+    return "income";
+  }
+
+  if (kind === "open_expense") {
+    return "expense";
+  }
+
+  return kind === "expense" ? "expense" : "income";
+}
+
+function isOpenKind(kind) {
+  return kind === "open_income" || kind === "open_expense";
 }
 
 function registerServiceWorker() {
