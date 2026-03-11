@@ -251,8 +251,6 @@ function renderCalendar() {
 
     card.addEventListener("click", () => {
       state.selectedDate = dateKey;
-      state.viewYear = date.getFullYear();
-      state.viewMonth = date.getMonth();
       cacheState(state);
       renderApp();
     });
