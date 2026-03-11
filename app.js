@@ -576,10 +576,13 @@ async function realizeFixedItem(id) {
     id: crypto.randomUUID(),
     date: input,
     kind: item.kind,
+    status: "closed",
     amount: item.amount,
     note: `${item.title} (realized)`,
     source: "fixed",
     fixedItemId: item.id,
+    createdAt: new Date().toISOString(),
+    realizedAt: new Date().toISOString(),
   });
 
   state.selectedDate = input;
