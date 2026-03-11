@@ -416,6 +416,21 @@ select:focus {
   box-shadow: 0 12px 28px rgba(111, 143, 130, 0.28);
 }
 
+.delete-button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  color: #7a4d4a;
+  background: rgba(235, 192, 191, 0.35);
+  transition: transform 140ms ease, background-color 140ms ease;
+}
+
+.delete-button:hover {
+  transform: translateY(-1px);
+  background: rgba(235, 192, 191, 0.55);
+}
+
 .fixed-lists {
   display: grid;
   gap: 18px;

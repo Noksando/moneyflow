@@ -394,6 +394,11 @@ function renderDayEntries() {
       await realizeEntry(entry.id);
     });
 
+    const deleteButton = node.querySelector(".entry-delete-button");
+    deleteButton.addEventListener("click", async () => {
+      await deleteEntry(entry.id);
+    });
+
     elements.dayEntryList.append(node);
   });
 }
@@ -435,6 +440,11 @@ function renderFixedList(container, kind) {
     button.hidden = !isOpen;
     button.addEventListener("click", async () => {
       await realizeFixedItem(item.id);
+    });
+
+    const deleteButton = node.querySelector(".fixed-delete-button");
+    deleteButton.addEventListener("click", async () => {
+      await deleteFixedItem(item.id);
     });
 
     container.append(node);
@@ -504,6 +514,39 @@ async function realizeEntry(id) {
 
   state.selectedDate = input;
   syncViewToSelectedDate();
+  cacheState(state);
+  renderApp();
+  await persistState();
+}
+
+async function deleteEntry(id) {
+  const entry = state.entries.find((target) => target.id === id);
+  if (!entry) {
+    return;
+  }
+
+  if (!window.confirm("이 항목을 삭제할까?")) {
+    return;
+  }
+
+  state.entries = state.entries.filter((target) => target.id !== id);
+  cacheState(state);
+  renderApp();
+  await persistState();
+}
+
+async function deleteFixedItem(id) {
+  const item = state.fixedItems.find((target) => target.id === id);
+  if (!item) {
+    return;
+  }
+
+  if (!window.confirm("이 고정 항목을 삭제할까?")) {
+    return;
+  }
+
+  state.fixedItems = state.fixedItems.filter((target) => target.id !== id);
+  state.entries = state.entries.filter((entry) => entry.fixedItemId !== id);
   cacheState(state);
   renderApp();
   await persistState();
