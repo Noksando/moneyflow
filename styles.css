@@ -265,9 +265,32 @@ h1 {
 }
 
 .compact-values {
-  font-size: 0.7rem;
-  line-height: 1.2;
-  color: var(--text);
+  display: grid;
+  gap: 1px;
+  min-height: 1.4rem;
+}
+
+.compact-line {
+  font-size: 0.69rem;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.compact-values.income .compact-line.realized {
+  color: #4f7d66;
+}
+
+.compact-values.income .compact-line.planned {
+  color: #88ab96;
+}
+
+.compact-values.expense .compact-line.realized {
+  color: #9c5f5d;
+}
+
+.compact-values.expense .compact-line.planned {
+  color: #c19896;
 }
 
 .chip.income.strong {
@@ -616,15 +639,15 @@ select:focus {
   }
 
   .totals {
-    gap: 5px;
+    gap: 4px;
   }
 
   .total-row {
-    gap: 2px;
+    gap: 1px;
   }
 
   .row-label {
-    font-size: 0.62rem;
+    display: none;
   }
 
   .chips {
@@ -634,5 +657,13 @@ select:focus {
   .chip {
     padding: 3px 6px;
     font-size: 0.64rem;
+  }
+
+  .compact-values {
+    min-height: auto;
+  }
+
+  .compact-line {
+    font-size: 0.66rem;
   }
 }

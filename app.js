@@ -288,20 +288,15 @@ function renderCalendar() {
 
 function createTotalRow(label, kind, realized, planned) {
   const row = document.createElement("div");
-  row.className = "total-row";
+  row.className = `total-row ${kind}`;
 
   const rowLabel = document.createElement("div");
   rowLabel.className = "row-label";
   rowLabel.textContent = label;
 
   if (isCompactCalendar()) {
-    const compactValues = document.createElement("div");
-    compactValues.className = "compact-values";
-    compactValues.textContent = [
-      formatCompactAmount(realized, kind === "income" ? "+" : "-"),
-      formatCompactPlanned(planned, kind === "income" ? "+" : "-"),
-    ].join(" ");
-    row.append(rowLabel, compactValues);
+    const compactValues = createCompactValues(kind, realized, planned);
+    row.append(compactValues);
     return row;
   }
 
@@ -331,6 +326,32 @@ function formatCompactAmount(amount, prefix) {
 
 function formatCompactPlanned(amount, prefix) {
   return amount > 0 ? `~${prefix}${formatMoney(amount)}` : "~0";
+}
+
+function createCompactValues(kind, realized, planned) {
+  const wrap = document.createElement("div");
+  wrap.className = `compact-values ${kind}`;
+
+  if (realized <= 0 && planned <= 0) {
+    wrap.textContent = "";
+    return wrap;
+  }
+
+  if (realized > 0) {
+    const realizedLine = document.createElement("div");
+    realizedLine.className = "compact-line realized";
+    realizedLine.textContent = `${kind === "income" ? "+" : "-"}${formatMoney(realized)}`;
+    wrap.append(realizedLine);
+  }
+
+  if (planned > 0) {
+    const plannedLine = document.createElement("div");
+    plannedLine.className = "compact-line planned";
+    plannedLine.textContent = `~${kind === "income" ? "+" : "-"}${formatMoney(planned)}`;
+    wrap.append(plannedLine);
+  }
+
+  return wrap;
 }
 
 function isCompactCalendar() {
