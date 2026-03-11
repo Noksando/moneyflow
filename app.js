@@ -288,6 +288,17 @@ function createTotalRow(label, kind, realized, planned) {
   rowLabel.className = "row-label";
   rowLabel.textContent = label;
 
+  if (isCompactCalendar()) {
+    const compactValues = document.createElement("div");
+    compactValues.className = "compact-values";
+    compactValues.textContent = [
+      formatCompactAmount(realized, kind === "income" ? "+" : "-"),
+      formatCompactPlanned(planned, kind === "income" ? "+" : "-"),
+    ].join(" ");
+    row.append(rowLabel, compactValues);
+    return row;
+  }
+
   const chips = document.createElement("div");
   chips.className = "chips";
   chips.append(
@@ -306,6 +317,18 @@ function createChip(kind, tone, amount, prefix) {
     ? `${tone === "strong" ? "확정" : "예정"} ${prefix}${formatMoney(amount)}`
     : `${tone === "strong" ? "확정" : "예정"} -`;
   return chip;
+}
+
+function formatCompactAmount(amount, prefix) {
+  return amount > 0 ? `${prefix}${formatMoney(amount)}` : `${prefix}0`;
+}
+
+function formatCompactPlanned(amount, prefix) {
+  return amount > 0 ? `~${prefix}${formatMoney(amount)}` : "~0";
+}
+
+function isCompactCalendar() {
+  return window.matchMedia("(max-width: 720px)").matches;
 }
 
 function renderSummary() {

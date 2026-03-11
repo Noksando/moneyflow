@@ -258,6 +258,12 @@ h1 {
   font-size: 0.8rem;
 }
 
+.compact-values {
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: var(--text);
+}
+
 .chip.income.strong {
   background: var(--income-strong);
 }
@@ -495,12 +501,48 @@ select:focus {
   }
 
   .day-card {
-    min-height: 116px;
-    padding: 10px;
+    min-height: 76px;
+    padding: 8px 6px;
+    gap: 6px;
+    border-radius: 16px;
   }
 
   .field-row,
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .weekday {
+    padding: 6px 2px;
+    font-size: 0.78rem;
+  }
+
+  .day-number {
+    font-size: 0.95rem;
+  }
+
+  .mini-note {
+    display: none;
+  }
+
+  .totals {
+    gap: 5px;
+  }
+
+  .total-row {
+    gap: 2px;
+  }
+
+  .row-label {
+    font-size: 0.62rem;
+  }
+
+  .chips {
+    gap: 4px;
+  }
+
+  .chip {
+    padding: 3px 6px;
+    font-size: 0.64rem;
   }
 }
