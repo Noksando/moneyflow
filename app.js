@@ -45,7 +45,7 @@ async function initialize() {
   renderWeekdays();
   bindEvents();
   renderApp();
-  registerServiceWorker();
+  clearLegacyServiceWorker();
   await loadRemoteState();
 }
 
@@ -879,20 +879,26 @@ function getAssetTotals() {
   }, { savings: 0, investment: 0 });
 }
 
-function registerServiceWorker() {
+function clearLegacyServiceWorker() {
   if (!("serviceWorker" in navigator) || !("caches" in window)) {
     return;
   }
 
-  window.addEventListener("load", async () => {
-    try {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map((registration) => registration.unregister()));
+  cleanupLegacyCaches();
 
-      const cacheKeys = await caches.keys();
-      await Promise.all(cacheKeys.map((key) => caches.delete(key)));
-    } catch {
-      // Keep the app usable even if cache cleanup fails.
-    }
+  window.addEventListener("pageshow", () => {
+    cleanupLegacyCaches();
   });
+}
+
+async function cleanupLegacyCaches() {
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+
+    const cacheKeys = await caches.keys();
+    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+  } catch {
+    // Keep the app usable even if cache cleanup fails.
+  }
 }

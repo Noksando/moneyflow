@@ -11,8 +11,35 @@ const app = express();
 let state = readState();
 
 app.use(express.json({ limit: "1mb" }));
+app.use((request, response, next) => {
+  if (request.path.startsWith("/api/")) {
+    response.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  }
+
+  next();
+});
+
 app.use(express.static(__dirname, {
-  maxAge: "1h",
+  etag: true,
+  lastModified: true,
+  maxAge: 0,
+  setHeaders(response, filePath) {
+    const fileName = path.basename(filePath);
+    const noStoreFiles = new Set([
+      "index.html",
+      "app.js",
+      "styles.css",
+      "service-worker.js",
+      "manifest.webmanifest",
+    ]);
+
+    if (noStoreFiles.has(fileName)) {
+      response.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      return;
+    }
+
+    response.set("Cache-Control", "public, max-age=0, must-revalidate");
+  },
 }));
 
 app.get("/api/health", (_request, response) => {
@@ -57,6 +84,7 @@ app.get("*", (request, response) => {
     return;
   }
 
+  response.set("Cache-Control", "no-store, no-cache, must-revalidate");
   response.sendFile(path.join(__dirname, "index.html"));
 });
 
