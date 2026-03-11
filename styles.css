@@ -202,6 +202,11 @@ h1 {
   opacity: 0.38;
 }
 
+.day-card.is-empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .day-card.is-selected {
   border-color: rgba(151, 121, 92, 0.4);
   box-shadow: inset 0 0 0 1px rgba(151, 121, 92, 0.22);

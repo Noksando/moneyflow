@@ -1,6 +1,6 @@
 const CACHE_STORAGE_KEY = "moneyflow-cache-v4";
 const LEGACY_STORAGE_KEY = "personal-finance-calendar-v1";
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const elements = {
   monthLabel: document.querySelector("#month-label"),
@@ -228,15 +228,22 @@ function renderCalendar() {
 
   const firstDay = new Date(state.viewYear, state.viewMonth, 1);
   const lastDay = new Date(state.viewYear, state.viewMonth + 1, 0);
-  const gridStart = new Date(firstDay);
-  gridStart.setDate(firstDay.getDate() - firstDay.getDay());
-  const gridEnd = new Date(lastDay);
-  gridEnd.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+  const mondayFirstOffset = (firstDay.getDay() + 6) % 7;
+  const totalCells = Math.ceil((mondayFirstOffset + lastDay.getDate()) / 7) * 7;
 
-  for (let date = new Date(gridStart); date <= gridEnd; date.setDate(date.getDate() + 1)) {
+  for (let cellIndex = 0; cellIndex < totalCells; cellIndex += 1) {
+    const dayNumber = cellIndex - mondayFirstOffset + 1;
+
+    if (dayNumber < 1 || dayNumber > lastDay.getDate()) {
+      const emptyCard = document.createElement("div");
+      emptyCard.className = "day-card is-empty";
+      elements.calendarGrid.append(emptyCard);
+      continue;
+    }
+
+    const date = new Date(state.viewYear, state.viewMonth, dayNumber);
     const dateKey = formatDateKey(date);
     const totals = getDailyTotals(dateKey);
-    const isCurrentMonth = date.getMonth() === state.viewMonth;
     const isSelected = dateKey === state.selectedDate;
     const isToday = dateKey === formatDateKey(today);
 
@@ -244,7 +251,6 @@ function renderCalendar() {
     card.type = "button";
     card.className = [
       "day-card",
-      !isCurrentMonth ? "is-outside" : "",
       isSelected ? "is-selected" : "",
       isToday ? "is-today" : "",
     ].filter(Boolean).join(" ");
