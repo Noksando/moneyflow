@@ -69,6 +69,13 @@ npm start
 
 `sushibap-settlement-app`처럼 DB 대신 Render persistent disk에 JSON 파일로 저장한다. 그래서 Postgres를 따로 만들 필요가 없고, 구조가 더 단순하다.
 
+## Data Persistence
+
+- Render에서는 실제 데이터가 `/var/data/moneyflow.json`에 저장된다.
+- 이 경로는 attached disk 위에 있으므로, 새로 push 하거나 redeploy 해도 데이터는 유지된다.
+- 데이터가 초기화되는 경우는 보통 서비스를 새로 만들거나, disk를 지우거나, `DATA_FILE` 경로를 바꾸는 경우다.
+- 저장소 안의 `data/` 폴더는 로컬 개발용 자리만 남기고, 실제 런타임 데이터는 git에 커밋하지 않는다.
+
 다음 단계로는 항목 단위 API 분리, 계정 복구, 월별 백업/내보내기 기능을 붙이는 게 맞다.
 
 ## Git Setup
