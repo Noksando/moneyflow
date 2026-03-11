@@ -378,18 +378,18 @@ function renderDayEntries() {
 
   selectedEntries.forEach((entry) => {
     const node = elements.dayEntryTemplate.content.firstElementChild.cloneNode(true);
-    node.querySelector(".day-entry-title").textContent = `${formatKindLabel(entry.kind)} ${formatSignedMoneyByKind(entry.kind, entry.amount)}`;
+    node.querySelector(".day-entry-title").textContent = `${entry.status === "open" ? "예정" : "확정"} ${formatKindLabel(entry.kind)} ${formatSignedMoneyByKind(entry.kind, entry.amount)}`;
 
     const status = node.querySelector(".day-entry-status");
     const isOpen = entry.status === "open";
-    status.textContent = isOpen ? "열린 상태" : "확정";
+    status.textContent = isOpen ? "예정" : "확정";
     status.className = `status-pill day-entry-status ${isOpen ? "is-open" : `is-closed ${entry.kind}`}`;
 
     const noteText = entry.note ? ` · ${entry.note}` : "";
     node.querySelector(".day-entry-meta").textContent = `${formatDisplayDate(entry.date)}${noteText}`;
 
     const button = node.querySelector(".entry-realize-button");
-    button.disabled = !isOpen;
+    button.hidden = !isOpen;
     button.addEventListener("click", async () => {
       await realizeEntry(entry.id);
     });
@@ -432,7 +432,7 @@ function renderFixedList(container, kind) {
     node.querySelector(".fixed-meta").textContent = `${formatMonthKey(activeMonthKey)}부터 반복 · ${formatKindLabel(kind)} ${formatMoney(item.amount)} · ${dateText}`;
 
     const button = node.querySelector(".realize-button");
-    button.disabled = !isOpen;
+    button.hidden = !isOpen;
     button.addEventListener("click", async () => {
       await realizeFixedItem(item.id);
     });

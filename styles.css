@@ -400,6 +400,22 @@ select:focus {
   color: var(--text);
 }
 
+.realize-button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  color: #fffaf4;
+  background: linear-gradient(135deg, #8daea0 0%, #6f8f82 100%);
+  box-shadow: 0 10px 24px rgba(111, 143, 130, 0.22);
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+}
+
+.realize-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(111, 143, 130, 0.28);
+}
+
 .fixed-lists {
   display: grid;
   gap: 18px;
@@ -500,12 +516,6 @@ select:focus {
 .fixed-status.is-closed.expense {
   background: var(--expense-strong);
   color: #6d4141;
-}
-
-.realize-button:disabled {
-  opacity: 0.45;
-  cursor: default;
-  transform: none;
 }
 
 @media (max-width: 1100px) {
